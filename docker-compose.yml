@@ -1,0 +1,39 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:16.2
+    restart: always
+    environment:
+      TZ: America/Sao_Paulo
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: banco-curso
+      POSTGRES_HOST_AUTH_METHOD: 'md5'
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+    networks:
+      - erudio-network
+
+  rest-with-spring-boot-erudio:
+    image: danilochagasc/api-curso
+    restart: always
+    build: ./api-curso
+    working_dir: /api-curso
+    environment:
+      TZ: America/Sao_Paulo
+      SPRING.DATASOURCE.URL: jdbc:postgresql://db:5432/banco-curso
+      SPRING.DATASOURCE.USERNAME: docker
+      SPRING.DATASOURCE.PASSWORD: admin123
+    ports:
+      - 80:80
+    command: mvn spring-boot:run
+    depends_on:
+      - db
+    networks:
+      - erudio-network
+
+networks:
+  erudio-network:
+    driver: bridge
