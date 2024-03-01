@@ -9,6 +9,11 @@ import br.com.erudio.apicurso.exception.ResourceNotFoundException;
 import br.com.erudio.apicurso.repository.BookRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.stereotype.Service;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
@@ -21,6 +26,28 @@ public class BookServices {
 	
 	@Autowired
 	BookRepository repository;
+
+	@Autowired
+	PagedResourcesAssembler<BookVO> assembler;
+
+	public PagedModel<EntityModel<BookVO>> findAll(Pageable pageable) {
+
+		var bookPage = repository.findAll(pageable);
+
+		var bookVosPage = bookPage.map(b-> DozerConverter.parseObject(b, BookVO.class));
+		bookVosPage.map(
+				b-> b.add(
+						linkTo(methodOn(BookController.class)
+								.findById(b.getKey())).withSelfRel()));
+
+		Link link = linkTo(
+				methodOn(BookController.class)
+						.findAll(pageable.getPageNumber(),
+								pageable.getPageSize(),
+								"asc")).withSelfRel();
+
+		return assembler.toModel(bookVosPage,link);
+	}
 		
 	public BookVO create(BookVO book) {
 
@@ -31,17 +58,6 @@ public class BookServices {
 		vo.add(linkTo(methodOn(BookController.class).findById(vo.getKey())).withSelfRel());
 		return vo;
 	}
-	
-	public List<BookVO> findAll() {
-		List<BookVO> books = DozerConverter.parseListObjects(repository.findAll(), BookVO.class);
-		books
-				.stream()
-				.forEach(b -> b.add(
-								linkTo(methodOn(BookController.class).findById(b.getKey())).withSelfRel()
-						)
-				);
-		return books;
-	}	
 	
 	public BookVO findById(Long id) {
 
